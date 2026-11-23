@@ -12,7 +12,7 @@
 --     anon/authenticated policy, reachable only through the service role.
 -- =============================================================================
 
-create extension if not exists extensions.citext  with schema extensions;
+create extension if not exists citext  with schema extensions;
 create extension if not exists pg_trgm with schema extensions;
 
 -- -----------------------------------------------------------------------------
@@ -73,6 +73,7 @@ create table public.profiles (
   avatar_url       text,
   bio              text check (char_length(bio) <= 500),
   github_username  extensions.citext,
+  github_id        bigint unique,          -- stable numeric GitHub id (logins can change)
   linkedin_url     text check (linkedin_url ~* '^https://([a-z]{2,3}\.)?linkedin\.com/'),
   website_url      text check (website_url ~* '^https?://'),
   contact_email    extensions.citext check (contact_email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
@@ -130,24 +131,26 @@ declare
     'user-' || substr(new.id::text, 1, 8)
   );
 begin
-  insert into public.profiles (id, username, full_name, avatar_url, github_username)
+  insert into public.profiles (id, username, full_name, avatar_url, github_username, github_id)
   values (
     new.id,
     gh_login,
     new.raw_user_meta_data ->> 'full_name',
     new.raw_user_meta_data ->> 'avatar_url',
-    new.raw_user_meta_data ->> 'user_name'
+    new.raw_user_meta_data ->> 'user_name',
+    nullif(new.raw_user_meta_data ->> 'provider_id', '')::bigint
   )
   on conflict (username) do nothing;
   -- rare: the GitHub login is already taken (e.g. someone renamed on GitHub)
   if not found then
-    insert into public.profiles (id, username, full_name, avatar_url, github_username)
+    insert into public.profiles (id, username, full_name, avatar_url, github_username, github_id)
     values (
       new.id,
       gh_login || '-' || substr(new.id::text, 1, 4),
       new.raw_user_meta_data ->> 'full_name',
       new.raw_user_meta_data ->> 'avatar_url',
-      new.raw_user_meta_data ->> 'user_name'
+      new.raw_user_meta_data ->> 'user_name',
+      nullif(new.raw_user_meta_data ->> 'provider_id', '')::bigint
     );
   end if;
   return new;
@@ -537,6 +540,8 @@ grant execute on function public.has_role(public.user_role)              to auth
 grant execute on function public.is_org_admin(uuid)                      to authenticated;
 grant execute on function public.trending_score(integer, timestamptz, double precision, timestamptz)
   to anon, authenticated;
+-- needed by the generated column projects.search on INSERT/UPDATE
+grant execute on function public.text_array_to_string(text[])            to anon, authenticated;
 grant execute on function public.review_opportunity(uuid, boolean, text) to authenticated;
 grant execute on function public.set_project_featured(uuid, boolean)     to authenticated;
 

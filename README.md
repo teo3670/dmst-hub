@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DET Hub
 
-## Getting Started
+Open-source hub για τους φοιτητές και αποφοίτους του **Τμήματος Διοικητικής Επιστήμης & Τεχνολογίας (ΔΕΤ), ΟΠΑ**:
+projects ανά έτος σπουδών με stars και Trending, οδηγός ερευνητικών εργαστηρίων και φοιτητικών ομάδων,
+board δράσεων που λήγουν αυτόματα, και (v1.1) Legacy Hall of Fame.
 
-First, run the development server:
+- **Public read:** όλα είναι δημόσια χωρίς login, ιδανικό για recruiters.
+- **Verified write:** posts και stars μόνο από επαληθευμένους λογαριασμούς `@aueb.gr`.
+
+## Γρήγορη εκκίνηση
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Εντολή | Τι κάνει |
+|---|---|
+| `npm run dev` | τοπικός server στο http://localhost:3000 |
+| `npm test` | unit tests (Trending, Legacy) |
+| `npm run test:db` | εφαρμόζει τα migrations σε Postgres (PGlite) και ελέγχει τα RLS |
+| `npm run lint` · `npm run typecheck` | έλεγχοι κώδικα |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Τεκμηρίωση
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [CONTRIBUTING.md](CONTRIBUTING.md): πώς να συνεισφέρεις (ξεκίνα από εδώ)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): stack, δομή φακέλων, μοντέλο ασφάλειας
+- [docs/ROADMAP.md](docs/ROADMAP.md): πλάνο MVP v1.0 και v1.1

@@ -18,16 +18,17 @@
 -- -----------------------------------------------------------------------------
 create table public.app_contributions (
   pr_number        integer primary key,
+  github_id        bigint not null,           -- PR author's numeric GitHub id
   github_username  extensions.citext not null,
   user_id          uuid references public.profiles (id) on delete set null,
   pr_title         text not null,
   pr_url           text not null check (pr_url ~* '^https://github\.com/'),
   merged_at        timestamptz not null
 );
-create index app_contributions_github_idx on public.app_contributions (github_username);
+create index app_contributions_github_idx on public.app_contributions (github_id);
 create index app_contributions_user_idx   on public.app_contributions (user_id);
 
--- Link contributions to a profile by GitHub username, whichever arrives first.
+-- Link a contribution to a profile by the stable GitHub id.
 create or replace function public.link_contribution_to_profile()
 returns trigger
 language plpgsql
@@ -38,7 +39,7 @@ begin
   if new.user_id is null then
     select p.id into new.user_id
       from public.profiles p
-     where p.github_username = new.github_username;
+     where p.github_id = new.github_id;
   end if;
   return new;
 end;
@@ -47,6 +48,27 @@ $$;
 create trigger app_contributions_link_profile
   before insert on public.app_contributions
   for each row execute function public.link_contribution_to_profile();
+
+-- ...and back-fill when a contributor signs up AFTER their PR was merged.
+create or replace function public.link_existing_contributions()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.github_id is not null then
+    update public.app_contributions
+       set user_id = new.id
+     where github_id = new.github_id and user_id is null;
+  end if;
+  return null;
+end;
+$$;
+
+create trigger profiles_link_contributions
+  after insert on public.profiles
+  for each row execute function public.link_existing_contributions();
 
 -- -----------------------------------------------------------------------------
 -- Scoring (pure function, used by the trigger and by tests)
@@ -157,6 +179,8 @@ begin
     new.award_verified := false;
     new.reviewed_by := null;
     new.reviewed_at := null;
+    new.stars_snapshot := 0;
+    new.merged_prs_snapshot := 0;
   end if;
   return new;
 end;
