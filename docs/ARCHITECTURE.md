@@ -10,7 +10,9 @@
 | Email OTP | Resend Free (3.000 emails/μήνα) | 0 € |
 | Tests | Vitest (logic) · PGlite (RLS/SQL χωρίς Docker) | — |
 
-> **Next.js 16:** το `middleware.ts` λέγεται πλέον `proxy.ts`. Πριν γράψεις κώδικα,
+> **Next.js 16:** το `middleware.ts` λέγεται πλέον `proxy.ts`. Επίσης είναι ενεργό το
+> `cacheComponents`: κάθε component που διαβάζει cookies/session (π.χ. `getViewer()`)
+> ή `searchParams` πρέπει να βρίσκεται μέσα σε `<Suspense>`, αλλιώς το build αποτυγχάνει. Πριν γράψεις κώδικα,
 > δες τα docs στο `node_modules/next/dist/docs/` (βλ. `AGENTS.md`).
 
 ## Δομή φακέλων
@@ -66,14 +68,17 @@ det-hub/
     │   │   ├── mod/opportunities/page.tsx   ουρά έγκρισης
     │   │   ├── mod/featured/page.tsx
     │   │   └── mod/legacy/page.tsx    (v1.1)
+    │   ├── login/page.tsx             σελίδα σύνδεσης (?next=…)
     │   └── auth/
     │       ├── callback/route.ts      OAuth code → session
-    │       └── signout/route.ts
+    │       └── error/page.tsx
     ├── actions/                       Server Actions (όλα τα writes)
+    │   ├── auth.ts                    signInWithGitHub() · signOut()
     │   ├── projects.ts · stars.ts · profile.ts
     │   ├── verification.ts            sendOtp() · confirmOtp()
     │   └── opportunities.ts · moderation.ts
     ├── components/
+    │   ├── auth/                      SignInButton
     │   ├── ui/                        Button, Card, Badge, Input…
     │   ├── layout/                    Header, Footer, Nav
     │   ├── projects/                  ProjectCard, StarButton, StudyYearBadge, Filters
@@ -83,8 +88,11 @@ det-hub/
     │   ├── supabase/
     │   │   ├── server.ts              createServerClient (cookies)
     │   │   ├── client.ts              createBrowserClient
+    │   │   ├── proxy.ts               updateSession() για το src/proxy.ts
     │   │   └── admin.ts               service role, ΜΟΝΟ server-side
-    │   ├── auth/guards.ts             requireUser() · requireVerified() · requireRole()
+    │   ├── auth/session.ts            getViewer() · requireViewer() · requireVerifiedViewer() · requireRole()
+    │   ├── auth/redirect.ts           safeNextPath() (anti open-redirect)
+    │   ├── env.ts                     έλεγχος env vars με zod
     │   ├── verification/otp.ts        generate · hash (HMAC) · rate limits
     │   ├── email/resend.ts
     │   ├── content/organizations.ts   διαβάζει content/organizations/*.md
