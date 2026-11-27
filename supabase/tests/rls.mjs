@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import { citext } from '@electric-sql/pglite/contrib/citext';
 import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 import { fileURLToPath } from 'node:url';
 const repo = process.argv[2] ?? fileURLToPath(new URL('../..', import.meta.url));
@@ -24,7 +24,7 @@ await db.exec(`
   grant execute on function storage.foldername(text) to authenticated;
 `);
 
-for (const f of ['20261124000001_mvp_core.sql', '20261124000002_v1_1_legacy.sql']) {
+for (const f of readdirSync(`${repo}/supabase/migrations`).filter((n) => n.endsWith('.sql')).sort()) {
   try { await db.exec(readFileSync(`${repo}/supabase/migrations/${f}`, "utf8")); } catch (e) { console.log("MIGRATION ERROR", f, e.message, e.where ?? ""); process.exit(1); }
   console.log('applied', f);
 }
@@ -138,6 +138,14 @@ await expectOk('anon sees hall of fame rank without GPA', () => as(anon, `select
 await expectOk('applicant edit resets to pending', () => as(A, `update public.legacy_applications set open_to_mentoring = true where id=$1 returning status, score`, [L]), r => r.rows[0].status === 'pending' && Number(r.rows[0].score) === 0);
 await expectErr('anon cannot insert contributions', () => as(anon, `insert into public.app_contributions (pr_number,github_id,github_username,pr_title,pr_url,merged_at) values (9,1,'x','x','https://github.com/a',now())`), /permission denied/);
 await expectOk('hall of fame empty again', () => as(anon, `select * from public.legacy_hall_of_fame`), r => r.rows.length === 0);
+
+console.log('\nfunction grants');
+// Regression guard: on real Supabase, functions once got EXECUTE for PUBLIC/anon.
+const ANON_CALLABLE = new Set(['trending_score', 'text_array_to_string']);
+await expectOk('anon can execute only the allow-listed functions', () => db.query(
+  `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')`),
+  (r) => { const extra = r.rows.map((x) => x.proname).filter((n) => !ANON_CALLABLE.has(n)); if (extra.length) throw new Error('anon can execute: ' + extra.join(', ')); return true; });
 
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nALL PASSED');
 process.exit(failures ? 1 : 0);

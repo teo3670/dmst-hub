@@ -100,8 +100,11 @@ frontend κώδικα. Γι' αυτό:
 1. **Ποτέ** μην αλλάζεις παλιό migration. Φτιάξε νέο:
    `npx supabase migration new <περιγραφή>`.
 2. **Κάθε νέος πίνακας** χρειάζεται `enable row level security` + policies.
-3. Οι default privileges είναι **κλειστές**: κάθε νέο table/function χρειάζεται ρητό
-   `grant` στο migration του (δες τα υπάρχοντα για παράδειγμα).
+3. **Μην εμπιστεύεσαι τις default privileges.** Κάθε νέο table χρειάζεται ρητό `grant`.
+   Κάθε νέα function χρειάζεται `revoke all on function ... from public, anon, authenticated;`
+   και μετά `grant execute` μόνο σε όποιον πρέπει. Στο Supabase οι functions παίρνουν
+   αλλιώς `EXECUTE` για όλους (δες `…_harden_function_grants.sql`). Μετά το deploy τρέξε
+   τον Security Advisor του Supabase.
 4. Στήλες που ο χρήστης δεν πρέπει να αλλάζει (π.χ. `role`, `is_verified_det`,
    `star_count`) **δεν μπαίνουν** στο `grant update (...)`.
 5. Πρόσθεσε σενάριο στο `supabase/tests/rls.mjs` και τρέξε `npm run test:db`.

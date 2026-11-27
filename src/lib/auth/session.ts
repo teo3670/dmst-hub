@@ -3,8 +3,9 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { Enums } from "@/types/database";
 
-export type UserRole = "student" | "club_admin" | "moderator";
+export type UserRole = Enums<"user_role">;
 
 export interface Viewer {
   id: string;
